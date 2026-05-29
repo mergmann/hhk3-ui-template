@@ -1,6 +1,5 @@
 #include <appdef.h>
 
-#include <cstdint>
 #include <sdk/os/debug.h>
 #include <sdk/os/lcd.h>
 
@@ -41,6 +40,7 @@ public:
     infoBox = new PegTextBox(textRect, Id_InfoText, TEXTBOX_STYLE,
                              "Select an option below...");
 
+    //
     Add(title->obj());
     Add(infoBox->obj());
 
@@ -142,37 +142,50 @@ private:
   PegEditBox *mpEditBox; // Pointer to our new EditBox
 };
 
+// Allocate 1MB of memory at the end of the heap for our program
 const size_t CODE_REGION_SIZE = 2 * 1024 * 1024;
 
+// This step is necessary since the loader is configured to load to 0x8cc80000
 extern "C" void calcInit() {
-  // Allocate 1MB of memory at the end of the heap for our program
+  // This moves the heap growth pointer to the end, and gives the large free
+  // area to malloc. That way malloc won't grow the heap into our code region
   auto *ptr = initFixedRegion(CODE_REGION_SIZE);
 
-  // Not enough heap space, reset the system to recreate the heap
+  // If anything does not work as expected, we call the OS routine to reset
+  // our heap changes. Since yal has already overwritten the part of the heap,
+  // we have to reset (otherwise other applications would read garbage)
   if (ptr != reinterpret_cast<void *>(0x8cc80000))
     heapReset();
 }
 
 extern "C" void calcExit() {
-  // Call the OS out-of-memory logic to remove our heap abuse
+  // Moves the heap growth pointer to the start of our code region. This allows
+  // other hollyhock applications to reuse the same area without needing a reset
   uninitFixedRegion(CODE_REGION_SIZE);
 }
 
-int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
-         [[maybe_unused]] char **envp) {
-  // TODO: Should be called by the loader before the actual binary is loaded.
-  // But since we reset the heap anyways if there is data, this shouldn't matter
-  calcInit();
-
+void uiMain() {
   // Make window slightly larger to fit everything nicely
   PegRect rectWin(10, 10, 310, 280);
   auto win = new MyWindow(rectWin);
 
-  // Show the window. This will also delete all the elements when it is closed
+  // Show the window. This blocks until the window is closed. It will also
+  // free all the elements
   win->Execute();
   // But it won't delete the wrapper class
   // WARNING: This may change in the future, not sure yet
   delete win;
+}
 
+int main() {
+  // TODO: Should be called by the loader before the actual binary is loaded.
+  // But for now we reset the heap anyways if there already is data, this
+  // shouldn't matter
+  calcInit();
+
+  // Call our UI setup function
+  uiMain();
+
+  // TODO: Should be called by the loader after the binary is unloaded
   calcExit();
 }
