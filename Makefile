@@ -2,18 +2,24 @@ SOURCEDIR = src
 BUILDDIR = obj
 OUTDIR = dist
 DEPDIR = .deps
+APPNAME = UITemplate
+SYSTEMUI = libs/systemui
 
-AS:=sh4a_nofpueb-elf-gcc
-AS_FLAGS:=-gdwarf-5
-
+OS?=7002
 SDK_DIR?=/sdk
+
+SYSTEMUI_LIB = $(SYSTEMUI)/dist/$(OS)/lib
+SYSTEMUI_AR = $(SYSTEMUI_LIB)/libsystemui.a
 
 DEPFLAGS=-MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 WARNINGS=-Wall -Wextra -pedantic -Werror -pedantic-errors
-INCLUDES=-I$(SDK_DIR)/include #-I$(SOURCEDIR)
+INCLUDES=-I$(SDK_DIR)/include -I$(SYSTEMUI)/include
 DEFINES=
 FUNCTION_FLAGS=-flto=auto -ffat-lto-objects -fno-builtin -ffunction-sections -fdata-sections -gdwarf-5 -O2
 COMMON_FLAGS=$(FUNCTION_FLAGS) $(INCLUDES) $(WARNINGS) $(DEFINES)
+
+AS:=sh4a_nofpueb-elf-gcc
+AS_FLAGS:=-gdwarf-5
 
 CC:=sh4a_nofpueb-elf-gcc
 CC_FLAGS=-std=c23 $(COMMON_FLAGS)
@@ -22,14 +28,14 @@ CXX:=sh4a_nofpueb-elf-g++
 CXX_FLAGS=-std=c++20 $(COMMON_FLAGS)
 
 LD:=sh4a_nofpueb-elf-g++
-LD_FLAGS:=$(FUNCTION_FLAGS) -Wl,--gc-sections
-LIBS:=-L$(SDK_DIR) -lsdk
+LD_FLAGS:=$(FUNCTION_FLAGS) -Wl,--gc-sections,-Ttext-segment,0x8CC80000
+LIBS:=-L$(SDK_DIR) -L$(SYSTEMUI_LIB) -lsystemui -lsdk
 
 READELF:=sh4a_nofpueb-elf-readelf
 OBJCOPY:=sh4a_nofpueb-elf-objcopy
 STRIP:=sh4a_nofpueb-elf-strip
 
-APP_ELF := $(OUTDIR)/CPapp.elf
+APP_ELF := $(OUTDIR)/$(OS)/$(APPNAME).elf
 APP_HH3 := $(APP_ELF:.elf=.hh3)
 
 AS_SOURCES:=$(shell find $(SOURCEDIR) -name '*.S')
@@ -52,16 +58,20 @@ all: elf hh3
 
 .NOTPARALLEL: clean
 clean:
+	$(MAKE) -C $(SYSTEMUI) $(MAKEFLAGS) clean
 	rm -rf $(BUILDDIR) $(OUTDIR) $(DEPDIR)
 
 %.hh3: %.elf
 	$(STRIP) -o $@ $^
 
-$(APP_ELF): $(OBJECTS)
+$(APP_ELF): $(OBJECTS) | $(SYSTEMUI_AR)
 	@mkdir -p $(dir $@)
 	$(LD) -Wl,-Map $@.map -o $@ $(LD_FLAGS) $^ $(LIBS)
 
 $(NOLTOOBJS): FUNCTION_FLAGS+=-fno-lto
+
+$(SYSTEMUI_AR): phony
+	$(MAKE) -C $(SYSTEMUI) OS=$(OS) SDK_DIR=$(SDK_DIR) all
 
 $(BUILDDIR)/%.o: %.S
 	@mkdir -p $(dir $@)
@@ -81,6 +91,6 @@ compile_commands.json:
 	$(MAKE) $(MAKEFLAGS) clean
 	bear -- sh -c "$(MAKE) $(MAKEFLAGS) --keep-going all || exit 0"
 
-.PHONY: elf hh3 all clean compile_commands.json
+.PHONY: phony elf hh3 all clean compile_commands.json
 
 -include $(DEPFILES)
