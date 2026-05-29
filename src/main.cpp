@@ -1,5 +1,6 @@
 #include <appdef.h>
 
+#include <sdk/calc/calc.h>
 #include <sdk/os/debug.h>
 #include <sdk/os/lcd.h>
 
@@ -145,6 +146,7 @@ private:
 // Allocate 1MB of memory at the end of the heap for our program
 const size_t CODE_REGION_SIZE = 2 * 1024 * 1024;
 
+// This is called before main
 // This step is necessary since the loader is configured to load to 0x8cc80000
 extern "C" void calcInit() {
   // This moves the heap growth pointer to the end, and gives the large free
@@ -158,13 +160,14 @@ extern "C" void calcInit() {
     heapReset();
 }
 
+// This is called after main
 extern "C" void calcExit() {
   // Moves the heap growth pointer to the start of our code region. This allows
   // other hollyhock applications to reuse the same area without needing a reset
   uninitFixedRegion(CODE_REGION_SIZE);
 }
 
-void uiMain() {
+int main() {
   // Make window slightly larger to fit everything nicely
   PegRect rectWin(10, 10, 310, 280);
   auto win = new MyWindow(rectWin);
@@ -175,17 +178,4 @@ void uiMain() {
   // But it won't delete the wrapper class
   // WARNING: This may change in the future, not sure yet
   delete win;
-}
-
-int main() {
-  // TODO: Should be called by the loader before the actual binary is loaded.
-  // But for now we reset the heap anyways if there already is data, this
-  // shouldn't matter
-  calcInit();
-
-  // Call our UI setup function
-  uiMain();
-
-  // TODO: Should be called by the loader after the binary is unloaded
-  calcExit();
 }
