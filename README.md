@@ -1,7 +1,10 @@
 # hhk3-ui-template
 A template for writing hollyhock-3 applications by using the system UI 
 
-## How to Setup
+## Disclaimer
+The wrapper implementation is a bit bugged right now, expect memory leaks and crashes.
+
+## How to setup
 1. Click **Use this template** in the GitHub interface and set up a repo
 2. Clone your repository
 3. Run `git submodule init --recursive` in the repo
