@@ -1,0 +1,3 @@
+[submodule "libs/systemui"]
+	path = libs/systemui
+	url = https://github.com/mergmann/hhk3-systemui
