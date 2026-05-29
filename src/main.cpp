@@ -12,6 +12,8 @@ APP_AUTHOR("snudget, pho3")
 APP_DESCRIPTION("PegVertList and PegEditBox")
 APP_VERSION("1.1.0")
 
+using namespace systemui;
+
 const WORD TEXTBOX_STYLE = FF_NONE | EF_WRAP | TJ_LEFT;
 
 class MyWindow : public PegDecoratedWindow {
