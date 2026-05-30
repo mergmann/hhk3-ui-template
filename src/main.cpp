@@ -145,7 +145,7 @@ private:
   PegEditBox *mpEditBox; // Pointer to our new EditBox
 };
 
-// Allocate 1MB of memory at the end of the heap for our program
+// Allocate 2MB of memory at the end of the heap for our program
 const size_t CODE_REGION_SIZE = 2 * 1024 * 1024;
 
 // This is called before main
